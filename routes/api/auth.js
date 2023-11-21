@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { validateBody, authenticate } = require("../../middlewares");
+const { validateBody, authenticate, upload } = require("../../middlewares");
 const { schemas } = require("../../models/user");
 const ctrl = require("../../controllers/auth");
 
@@ -16,6 +16,15 @@ router.patch(
   validateBody(schemas.updateSubscription),
   ctrl.updateSubscription
 );
+router.patch(
+  "/avatars",
+  authenticate,
+  upload.single("avatarURL"),
+  ctrl.updateAvatar
+);
 module.exports = router;
 
 // hollystay;
+
+// "password": "firemetgazoline",
+// "email": "fire@gmail.com"

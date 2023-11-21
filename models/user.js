@@ -1,5 +1,6 @@
 const { Schema, model } = require("mongoose");
 const Joi = require("joi");
+const gravatar = require("gravatar");
 const { handleMongooseError } = require("../helpers");
 const options = { versionKey: false, timestamps: true };
 const userSchema = new Schema(
@@ -18,7 +19,14 @@ const userSchema = new Schema(
       enum: ["starter", "pro", "business"],
       default: "starter",
     },
-    token: String,
+    token: {
+      type: String,
+      default: "",
+    },
+    avatarURL: {
+      type: String,
+      required: [true, "Avatar is required"],
+    },
   },
   options
 );
