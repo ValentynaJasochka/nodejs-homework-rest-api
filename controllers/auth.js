@@ -1,8 +1,12 @@
 const { User } = require("../models/user");
 const bcrypt = require("bcrypt");
+const path = require("path");
 const jwt = require("jsonwebtoken");
+const fs = require("fs/promises");
+const gravatar = require("gravatar");
+const jimp = require("jimp");
 const { SECRET_KEY } = process.env;
-const { HttpError, ctrlWrapper } = require("../helpers");
+const { HttpError, ctrlWrapper, standardizeImage } = require("../helpers");
 
 const register = async (req, res, next) => {
   const { email, password } = req.body;
@@ -12,7 +16,13 @@ const register = async (req, res, next) => {
     throw HttpError(409, "Email in use");
   }
   const hashPassword = await bcrypt.hash(password, 10);
-  const newUser = await User.create({ ...req.body, password: hashPassword });
+  const avatarURL = gravatar.url(email);
+  console.log(avatarURL);
+  const newUser = await User.create({
+    ...req.body,
+    avatarURL,
+    password: hashPassword,
+  });
 
   res.status(201).json({
     user: {
@@ -29,7 +39,7 @@ const login = async (req, res) => {
     throw HttpError(401, "Email or password is wrong");
   }
   const payload = { id: user.id };
-  const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "30d" });
+  const token = jwt.sign(payload, process.env.SECRET_KEY, { expiresIn: "30d" });
   await User.findByIdAndUpdate(user.id, { token });
   res.status(201).json({
     token: token,
@@ -55,10 +65,24 @@ const updateSubscription = async (req, res) => {
   });
   res.status(200).json(user);
 };
+const avatarDir = path.join(__dirname, "../", "public", "avatars");
+const updateAvatar = async (req, res, next) => {
+  const { _id: id } = req.user;
+  const { path: tmpUpload, originalname } = req.file;
+  await standardizeImage(tmpUpload);
+  const filename = `${id}_${originalname}`;
+  const resultUpload = path.join(avatarDir, filename);
+  await fs.rename(tmpUpload, resultUpload);
+  const avatarURL = path.join("avatar", filename);
+  await User.findByIdAndUpdate(id, { avatarURL });
+  res.status(200).json({ avatarURL });
+};
+
 module.exports = {
   register: ctrlWrapper(register),
   login: ctrlWrapper(login),
   logout: ctrlWrapper(logout),
   getCurrent: ctrlWrapper(getCurrent),
   updateSubscription: ctrlWrapper(updateSubscription),
+  updateAvatar: ctrlWrapper(updateAvatar),
 };
